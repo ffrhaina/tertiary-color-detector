@@ -1,4 +1,4 @@
-// Configuration - REPLACE WITH YOUR MODEL URL
+// Configuration - YOUR MODEL URL
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/PDP2vtgBM/";
 
 // Global variables
@@ -21,19 +21,10 @@ const predictionsDiv = document.getElementById('predictions');
 
 // Initialize
 async function init() {
-    // Load model when button is clicked
     loadModelBtn.addEventListener('click', loadModel);
-    
-    // File input handler
     fileInput.addEventListener('change', handleImageUpload);
-    
-    // Camera button handler
     cameraBtn.addEventListener('click', initWebcam);
-    
-    // Snap photo handler
     snapBtn.addEventListener('click', capturePhoto);
-    
-    // Detect button handler
     detectBtn.addEventListener('click', detectColors);
 }
 
@@ -43,6 +34,8 @@ async function loadModel() {
         modelStatus.textContent = "Loading model...";
         modelStatus.style.background = "#fff3cd";
         loadModelBtn.disabled = true;
+        
+        console.log("Loading model from:", MODEL_URL);
         
         // Load the model
         model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
@@ -57,6 +50,7 @@ async function loadModel() {
         modelStatus.textContent = "❌ Error loading model: " + error.message;
         modelStatus.style.background = "#f8d7da";
         console.error("Error loading model:", error);
+        console.error("Tried to load from:", MODEL_URL);
     }
 }
 
@@ -108,7 +102,9 @@ function capturePhoto() {
     displayImage(canvas.toDataURL('image/png'));
     
     // Stop webcam
-    webcam.stream.getTracks().forEach(track => track.stop());
+    if (webcam && webcam.stream) {
+        webcam.stream.getTracks().forEach(track => track.stop());
+    }
     webcamContainer.style.display = 'none';
     cameraBtn.style.display = 'inline-block';
     webcam = null;

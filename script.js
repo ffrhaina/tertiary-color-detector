@@ -1,224 +1,111 @@
+// Configuration
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/PDP2vtgBM/";
 
-const MODEL_URL = "https://teachablemachine.withgoogle.com/models/PDP2vtgBM/model.json";
-
-model = await tmImage.load(MODEL_URL);
+console.log("Script loaded. Model URL:", MODEL_URL);
 
 // Global variables
 let model = null;
-let webcam = null;
-let currentImage = null;
 
 // DOM Elements
 const loadModelBtn = document.getElementById('load-model-btn');
 const modelStatus = document.getElementById('model-status');
-const cameraBtn = document.getElementById('camera-btn');
-const fileInput = document.getElementById('file-input');
-const webcamContainer = document.getElementById('webcam-container');
-const webcamElement = document.getElementById('webcam');
-const snapBtn = document.getElementById('snap-btn');
-const imagePreview = document.getElementById('image-preview');
-const detectBtn = document.getElementById('detect-btn');
-const resultsDiv = document.getElementById('results');
-const predictionsDiv = document.getElementById('predictions');
 
-// Initialize
-async function init() {
-    loadModelBtn.addEventListener('click', loadModel);
-    fileInput.addEventListener('change', handleImageUpload);
-    cameraBtn.addEventListener('click', initWebcam);
-    snapBtn.addEventListener('click', capturePhoto);
-    detectBtn.addEventListener('click', detectColors);
-}
-
-// Load Teachable Machine model
+// Load Model Function
 async function loadModel() {
+    console.log("Load button clicked");
+    
     try {
         modelStatus.textContent = "Loading model...";
         modelStatus.style.background = "#fff3cd";
         loadModelBtn.disabled = true;
         
-        console.log("Loading model from:", MODEL_URL);
+        console.log("Attempting to load model from:", MODEL_URL);
+        
+        // Test if URLs are accessible
+        console.log("Testing model.json URL:", MODEL_URL + "model.json");
+        console.log("Testing metadata.json URL:", MODEL_URL + "metadata.json");
+        
+        // Try to fetch the model.json first
+        const modelResponse = await fetch(MODEL_URL + "model.json");
+        console.log("Model fetch response:", modelResponse.status);
+        
+        if (!modelResponse.ok) {
+            throw new Error(`HTTP ${modelResponse.status}: ${modelResponse.statusText}`);
+        }
         
         // Load the model
+        console.log("Loading with tmImage.load...");
         model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
         
+        console.log("Model loaded successfully!");
         modelStatus.textContent = "✅ Model loaded successfully!";
         modelStatus.style.background = "#d4edda";
-        cameraBtn.disabled = false;
-        detectBtn.disabled = false;
         
-        console.log("Model loaded successfully");
+        // Enable other buttons
+        document.getElementById('camera-btn').disabled = false;
+        document.getElementById('detect-btn').disabled = false;
+        
     } catch (error) {
-        modelStatus.textContent = "❌ Error loading model: " + error.message;
+        console.error("Detailed error:", error);
+        modelStatus.textContent = `❌ Error: ${error.message}`;
         modelStatus.style.background = "#f8d7da";
-        console.error("Error loading model:", error);
-        console.error("Tried to load from:", MODEL_URL);
+        
+        // Try alternative URL format
+        console.log("Trying alternative URL format...");
+        tryAlternativeURL();
     }
 }
 
-// Handle image upload
-function handleImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+// Try alternative URL format
+async function tryAlternativeURL() {
+    const altURL = MODEL_URL.replace(/\/$/, '') + "/model.json";
+    console.log("Trying alternative URL:", altURL);
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        displayImage(e.target.result);
-    };
-    reader.readAsDataURL(file);
-}
-
-// Initialize webcam
-async function initWebcam() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-                width: 640, 
-                height: 480,
-                facingMode: 'environment'
-            } 
-        });
-        
-        webcamElement.srcObject = stream;
-        webcamContainer.style.display = 'block';
-        cameraBtn.style.display = 'none';
-        
-        webcam = {
-            stream: stream,
-            video: webcamElement
-        };
-    } catch (error) {
-        alert("Error accessing camera: " + error.message);
-    }
-}
-
-// Capture photo from webcam
-function capturePhoto() {
-    const canvas = document.createElement('canvas');
-    canvas.width = webcamElement.videoWidth;
-    canvas.height = webcamElement.videoHeight;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(webcamElement, 0, 0);
-    
-    displayImage(canvas.toDataURL('image/png'));
-    
-    // Stop webcam
-    if (webcam && webcam.stream) {
-        webcam.stream.getTracks().forEach(track => track.stop());
-    }
-    webcamContainer.style.display = 'none';
-    cameraBtn.style.display = 'inline-block';
-    webcam = null;
-}
-
-// Display image on canvas
-function displayImage(imageSrc) {
-    const ctx = imagePreview.getContext('2d');
-    const img = new Image();
-    
-    img.onload = function() {
-        // Set canvas dimensions
-        imagePreview.width = Math.min(800, img.width);
-        imagePreview.height = (img.height / img.width) * imagePreview.width;
-        
-        // Draw image
-        ctx.drawImage(img, 0, 0, imagePreview.width, imagePreview.height);
-        
-        // Store current image
-        currentImage = img;
-        
-        // Show detect button if model is loaded
-        if (model) {
-            detectBtn.disabled = false;
+        const response = await fetch(altURL);
+        if (response.ok) {
+            modelStatus.textContent += "\n⚠️ Try removing / from MODEL_URL";
         }
-    };
-    
-    img.src = imageSrc;
+    } catch (e) {
+        console.log("Alternative also failed:", e.message);
+    }
 }
 
-// Detect colors in image
-async function detectColors() {
-    if (!model) {
-        alert("Please load the model first!");
+// Initialize
+function init() {
+    console.log("Initializing app...");
+    
+    // Check if Teachable Machine library is loaded
+    if (typeof tmImage === 'undefined') {
+        modelStatus.textContent = "❌ Teachable Machine library not loaded";
         return;
     }
     
-    if (!currentImage && !webcam) {
-        alert("Please upload an image or use the camera first!");
-        return;
-    }
+    console.log("tmImage available:", typeof tmImage);
     
-    try {
-        detectBtn.disabled = true;
-        detectBtn.textContent = "Detecting...";
-        
-        let predictions;
-        
-        if (currentImage) {
-            // Use uploaded image
-            predictions = await model.predict(currentImage);
-        } else {
-            // Use webcam frame
-            predictions = await model.predict(webcamElement);
+    loadModelBtn.addEventListener('click', loadModel);
+    
+    // Simple file upload handler for testing
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.getElementById('image-preview');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    window.currentImage = img;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
-        
-        displayPredictions(predictions);
-        
-    } catch (error) {
-        console.error("Detection error:", error);
-        alert("Error detecting colors: " + error.message);
-    } finally {
-        detectBtn.disabled = false;
-        detectBtn.textContent = "🔍 Detect Tertiary Colors";
-    }
-}
-
-// Display predictions
-function displayPredictions(predictions) {
-    resultsDiv.style.display = 'block';
-    predictionsDiv.innerHTML = '';
-    
-    // Sort predictions by probability
-    predictions.sort((a, b) => b.probability - a.probability);
-    
-    // Display top predictions
-    predictions.forEach(pred => {
-        const probability = (pred.probability * 100).toFixed(2);
-        const predictionItem = document.createElement('div');
-        predictionItem.className = 'prediction-item';
-        predictionItem.innerHTML = `
-            <strong>${pred.className}:</strong> ${probability}%
-            <div class="progress-bar">
-                <div class="progress" style="width: ${probability}%"></div>
-            </div>
-        `;
-        predictionsDiv.appendChild(predictionItem);
     });
-    
-    // Scroll to results
-    resultsDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Add CSS for progress bar
-const style = document.createElement('style');
-style.textContent = `
-    .progress-bar {
-        width: 100%;
-        height: 20px;
-        background: #e0e0e0;
-        border-radius: 10px;
-        margin-top: 5px;
-        overflow: hidden;
-    }
-    .progress {
-        height: 100%;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        border-radius: 10px;
-        transition: width 0.5s;
-    }
-`;
-document.head.appendChild(style);
-
-// Initialize the application
+// Start when page loads
 document.addEventListener('DOMContentLoaded', init);

@@ -1,5 +1,7 @@
-// Configuration - YOUR MODEL URL
-const MODEL_URL = "https://teachablemachine.withgoogle.com/models/PDP2vtgBM/";
+
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/PDP2vtgBM/model.json";
+
+model = await tmImage.load(MODEL_URL);
 
 // Global variables
 let model = null;

@@ -1,5 +1,5 @@
 // Configuration - REPLACE WITH YOUR MODEL URL
-const MODEL_URL = "https://teachablemachine.withgoogle.com/models/YOUR_MODEL_ID/";
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/PDP2vtgBM/";
 
 // Global variables
 let model = null;
